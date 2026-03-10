@@ -108,6 +108,7 @@ describe('Filter by status', () => {
     expect(res.status).toBe(200);
     expect(res.body.every(t => t.completed === 1)).toBe(true);
     expect(res.body.find(t => t.id === b.id)).toBeDefined();
+    expect(res.body.find(t => t.id === a.id)).toBeUndefined();
   });
 });
 

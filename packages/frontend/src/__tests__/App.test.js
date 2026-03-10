@@ -48,16 +48,17 @@ const server = setupServer(
     return res(ctx.status(200), ctx.json({ ...todo }));
   }),
 
-  rest.delete('/api/todos/:id', (req, res, ctx) => {
-    const id = parseInt(req.params.id, 10);
-    serverTodos = serverTodos.filter((t) => t.id !== id);
-    return res(ctx.status(200), ctx.json({ message: 'Deleted', id }));
-  }),
-
+  // Must be registered before /:id so MSW doesn't match 'completed' as an id
   rest.delete('/api/todos/completed', (req, res, ctx) => {
     const before = serverTodos.length;
     serverTodos = serverTodos.filter((t) => !t.completed);
     return res(ctx.status(200), ctx.json({ count: before - serverTodos.length }));
+  }),
+
+  rest.delete('/api/todos/:id', (req, res, ctx) => {
+    const id = parseInt(req.params.id, 10);
+    serverTodos = serverTodos.filter((t) => t.id !== id);
+    return res(ctx.status(200), ctx.json({ message: 'Deleted', id }));
   }),
 
   rest.put('/api/todos/:id', async (req, res, ctx) => {

@@ -47,7 +47,7 @@ describe('GET /api/todos', () => {
   });
 
   it('filters by status=active', async () => {
-    const todo = await createTodo({ title: 'Active' });
+    await createTodo({ title: 'Active' });
     await createTodo({ title: 'Completed' });
     await request(app).patch(`/api/todos/${(await createTodo({ title: 'Done' })).id}/complete`);
 
@@ -117,6 +117,7 @@ describe('POST /api/todos', () => {
   it('returns 400 when title is empty string', async () => {
     const response = await request(app).post('/api/todos').send({ title: '   ' });
     expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Todo title is required');
   });
 
   it('returns 400 for invalid priority', async () => {
