@@ -1,126 +1,157 @@
-import React, { useState, useEffect } from 'react';
-import './App.css';
+import React, { useState } from 'react';
+import { ThemeProvider, CssBaseline } from '@mui/material';
+import {
+  Container,
+  Box,
+  Typography,
+  Stack,
+  Button,
+  CircularProgress,
+  Snackbar,
+  Alert,
+  Divider,
+} from '@mui/material';
+import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
+
+import theme from './theme';
+import useTodos from './hooks/useTodos';
+import AddTaskForm from './components/AddTaskForm';
+import TaskList from './components/TaskList';
+import FilterBar from './components/FilterBar';
+import SortControls from './components/SortControls';
+import EditTaskModal from './components/EditTaskModal';
+import EmptyState from './components/EmptyState';
 
 function App() {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [newItem, setNewItem] = useState('');
+  const {
+    todos,
+    loading,
+    notification,
+    clearNotification,
+    statusFilter,
+    setStatusFilter,
+    priorityFilter,
+    setPriorityFilter,
+    sort,
+    setSort,
+    addTodo,
+    editTodo,
+    toggleTodo,
+    removeTodo,
+    removeCompleted,
+  } = useTodos();
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const [editTarget, setEditTarget] = useState(null);
+  const [addFormOpen, setAddFormOpen] = useState(false);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/items');
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-      const result = await response.json();
-      setData(result);
-      setError(null);
-    } catch (err) {
-      setError('Failed to fetch data: ' + err.message);
-      console.error('Error fetching data:', err);
-    } finally {
-      setLoading(false);
-    }
+  const handleSaveEdit = async (payload) => {
+    await editTodo(editTarget.id, payload);
+    setEditTarget(null);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!newItem.trim()) return;
-
-    try {
-      const response = await fetch('/api/items', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name: newItem }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to add item');
-      }
-
-      const result = await response.json();
-      setData([...data, result]);
-      setNewItem('');
-    } catch (err) {
-      setError('Error adding item: ' + err.message);
-      console.error('Error adding item:', err);
-    }
-  };
-
-  const handleDelete = async (itemId) => {
-    try {
-      const response = await fetch(`/api/items/${itemId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete item');
-      }
-
-      setData(data.filter(item => item.id !== itemId));
-      setError(null);
-    } catch (err) {
-      setError('Error deleting item: ' + err.message);
-      console.error('Error deleting item:', err);
-    }
-  };
+  const hasCompleted = todos.some((t) => t.completed);
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>To Do App</h1>
-        <p>Keep track of your tasks</p>
-      </header>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box sx={{ bgcolor: 'background.default', minHeight: '100vh', py: 4 }}>
+        <Container maxWidth="md">
+          <Stack spacing={3}>
+            {/* Header */}
+            <Box>
+              <Typography variant="h4" component="h1" fontWeight={700} color="primary">
+                My Tasks
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Keep track of what needs to get done.
+              </Typography>
+            </Box>
 
-      <main>
-        <section className="add-item-section">
-          <h2>Add New Item</h2>
-          <form onSubmit={handleSubmit}>
-            <input
-              type="text"
-              value={newItem}
-              onChange={(e) => setNewItem(e.target.value)}
-              placeholder="Enter item name"
-            />
-            <button type="submit">Add Item</button>
-          </form>
-        </section>
+            {/* Add Task Form */}
+            <Box sx={{ bgcolor: 'background.paper', borderRadius: 2, p: 3, boxShadow: 1 }}>
+              <Typography variant="h6" gutterBottom>
+                Add a Task
+              </Typography>
+              <AddTaskForm onAdd={addTodo} />
+            </Box>
 
-        <section className="items-section">
-          <h2>Items from Database</h2>
-          {loading && <p>Loading data...</p>}
-          {error && <p className="error">{error}</p>}
-          {!loading && !error && (
-            <ul>
-              {data.length > 0 ? (
-                data.map((item) => (
-                  <li key={item.id}>
-                    <span>{item.name}</span>
-                    <button 
-                      onClick={() => handleDelete(item.id)}
-                      className="delete-btn"
-                      type="button"
-                    >
-                      Delete
-                    </button>
-                  </li>
-                ))
-              ) : (
-                <p>No items found. Add some!</p>
-              )}
-            </ul>
-          )}
-        </section>
-      </main>
-    </div>
+            {/* Controls */}
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              justifyContent="space-between"
+              alignItems={{ xs: 'flex-start', sm: 'center' }}
+              spacing={2}
+              flexWrap="wrap"
+            >
+              <FilterBar
+                statusFilter={statusFilter}
+                onStatusChange={setStatusFilter}
+                priorityFilter={priorityFilter}
+                onPriorityChange={setPriorityFilter}
+              />
+              <SortControls sort={sort} onSortChange={setSort} />
+            </Stack>
+
+            {hasCompleted && (
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  startIcon={<DeleteSweepIcon />}
+                  onClick={removeCompleted}
+                >
+                  Clear completed
+                </Button>
+              </Box>
+            )}
+
+            <Divider />
+
+            {/* Task list */}
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+                <CircularProgress aria-label="Loading tasks" />
+              </Box>
+            ) : todos.length === 0 ? (
+              <EmptyState onAdd={() => document.querySelector('input[aria-label="task title"]')?.focus()} />
+            ) : (
+              <TaskList
+                todos={todos}
+                onToggle={toggleTodo}
+                onEdit={setEditTarget}
+                onDelete={removeTodo}
+              />
+            )}
+          </Stack>
+        </Container>
+
+        {/* Edit modal */}
+        <EditTaskModal
+          open={Boolean(editTarget)}
+          todo={editTarget}
+          onSave={handleSaveEdit}
+          onClose={() => setEditTarget(null)}
+        />
+
+        {/* Notifications */}
+        <Snackbar
+          open={Boolean(notification)}
+          autoHideDuration={4000}
+          onClose={clearNotification}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert
+            onClose={clearNotification}
+            severity={notification?.severity || 'success'}
+            variant="filled"
+            sx={{ width: '100%' }}
+          >
+            {notification?.message}
+          </Alert>
+        </Snackbar>
+      </Box>
+    </ThemeProvider>
   );
 }
 
